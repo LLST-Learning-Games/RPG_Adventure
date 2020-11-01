@@ -1,0 +1,108 @@
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
+using UnityEngine;
+
+
+namespace RPG.Saving
+{
+    public class SavingSystem : MonoBehaviour
+    {
+        public void Save(string saveFile)
+        {
+            string path = GetPathFromSaveFile(saveFile);
+            print("Saving to " + path);
+
+            // First, open the file stream. using() {...} ensures the stream is closed afterward.
+            using (FileStream stream = File.Open(path, FileMode.Create))
+            {
+                // get the player transform
+                Transform playerTransform = GameObject.FindWithTag("Player").transform;
+
+                BinaryFormatter formatter = new BinaryFormatter();
+                formatter.Serialize(stream, new SerializableVector3(playerTransform.position));
+
+                /*
+                // serialize the player transform into an array of bytes
+                byte[] buffer = SerializeVector(playerTransform.position);
+
+                //NOTE: below is old file saving example with text:
+                //byte[] byteString = Encoding.UTF8.GetBytes("Party on Wayne");
+
+               
+                stream.Write(buffer, 0, buffer.Length);
+                //stream.Close();    This is no longer needed b/c of the "using" statement, which automatically closes the stream
+                */
+            }
+
+
+        }
+
+        public void Load(string saveFile)
+        {
+            string path = GetPathFromSaveFile(saveFile);
+            print("Loading from " + path);
+
+            // First, open the file stream. using() {...} ensures the stream is closed afterward.
+            using (FileStream stream = File.Open(path, FileMode.Open))
+            {
+                /*
+                // create the array
+                byte[] buffer = new byte[stream.Length];
+
+                // read the bytes into the array
+                stream.Read(buffer, 0, buffer.Length);
+                */
+                BinaryFormatter formatter = new BinaryFormatter();
+                SerializableVector3 v = (SerializableVector3) formatter.Deserialize(stream);
+
+                // Grab the player transform
+                Transform playerTransform = GameObject.FindWithTag("Player").transform;
+
+                playerTransform.position = v.DeserializeVector3();
+            }
+
+        }
+
+        private byte[] SerializeVector(Vector3 vector)
+        {
+            // How do we know how long this array should be? 
+            // We have three floats in a Vector: X,Y, and Z
+            // A float is 4 bytes. So, 3 * 4. Easy peasy.
+            byte[] vectorBytes = new byte[3 * 4];
+
+            BitConverter.GetBytes(vector.x).CopyTo(vectorBytes, 0);
+            BitConverter.GetBytes(vector.y).CopyTo(vectorBytes, 4);
+            BitConverter.GetBytes(vector.z).CopyTo(vectorBytes, 8);
+
+            return vectorBytes;
+
+
+        }
+
+        private Vector3 DeserializeVector(byte[] buffer)
+        {
+            Vector3 result = new Vector3();
+            result.x = BitConverter.ToSingle(buffer, 0);
+            result.y = BitConverter.ToSingle(buffer, 4);
+            result.z = BitConverter.ToSingle(buffer, 8);
+            return result;
+
+
+        }
+
+        private string GetPathFromSaveFile(string saveFile)
+        {
+            return Path.Combine(Application.persistentDataPath, saveFile + ".sav");
+        }
+    }
+}
+
+
+//
+// For reference:
+// Combine(String, String, String, ...) returns a string which uses the proper combine symbol in your system
+//
